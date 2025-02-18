@@ -92,7 +92,6 @@ const FFTPlan = struct {
     plan: fftw.fftw_plan,
     pub const Direction = enum { forward, backward };
     fn init(in: []f64, out: []FFTWComplex) FFTPlan {
-        std.debug.assert(in.len == out.len);
         return .{ .plan = fftw.fftw_plan_dft_r2c_1d(@intCast(in.len), in.ptr, out.ptr, 1 << 6).? };
     }
 
@@ -126,6 +125,7 @@ pub fn main() !void {
         std.process.exit(0);
     }
 
+
     var file = try cwd.openFile(file_name, .{});
     defer file.close();
     const decoder = Decoder.init(file.reader());
@@ -136,7 +136,7 @@ pub fn main() !void {
     const n = try riff.stream.readAll(music_data[0..]);
     std.debug.assert(n == riff.len);
 
-    const samples: []u16 = @as([*]u16, @ptrCast(@alignCast(music_data.ptr)))[0 .. music_data.len / 2];
+    const samples: []i16 = @as([*]i16, @ptrCast(@alignCast(music_data.ptr)))[0 .. music_data.len / 2];
 
     const a = fftwMalloc(f64, samples.len);
 
@@ -146,7 +146,7 @@ pub fn main() !void {
     }
     gpa.allocator().free(music_data);
 
-    const b = fftwMalloc(FFTWComplex, a.len);
+    const b = fftwMalloc(FFTWComplex, a.len/2+1);
     var plan = FFTPlan.init(a, b);
     plan.execute();
     fftwFree(a);
@@ -183,22 +183,48 @@ pub fn main() !void {
         mags.items[i] /= max_mag;
     }
 
+    //var max_ampl:i16 = 0;
+    //var min_ampl:i16 = 0;
+    //for(samples) |s| {
+    //    if(s > max_ampl) max_ampl = s;
+    //    if(s < min_ampl) min_ampl = s;
+    //}
+
     const window_w = 800;
     const window_h = 600;
     c.InitWindow(window_w, window_h, "malware");
     c.SetTargetFPS(60);
 
     var start_pos: usize = 0;
-
     while (!c.WindowShouldClose()) {
         c.ClearBackground(c.RED);
         c.BeginDrawing();
+
         const rem = mags.items.len - start_pos;
         if (rem == 0) break;
         for (0..if (rem > 400) 400 else rem) |i| {
             c.DrawRectangleV(.{ .x = @floatFromInt(i * 2), .y = @floatFromInt(window_h / 2) }, .{ .x = 2, .y = @floatCast(mags.items[i + start_pos] * window_h / 2) }, c.BLACK);
             c.DrawRectangleV(.{ .x = @floatFromInt(i * 2 + 2), .y = @floatFromInt(window_h / 2) }, .{ .x = -2, .y = @floatCast(mags.items[i + start_pos] * -(window_h / 2)) }, c.YELLOW);
         }
+
+        //const wave_rem = samples.len - wave_start_pos;
+        //if(wave_rem == 0) break;
+        //var old_point = c.Vector2{
+        //    .x = 0,
+        //    .y = window_h/2
+        //};
+        //for (0..if (wave_rem > 800) 400 else wave_rem/2) |i| {
+        //    var point = c.Vector2 {
+        //        .x = @floatFromInt(i*2),
+        //        .y = (@as(f32, @floatFromInt(samples[i*2 + wave_start_pos])) /
+        //        @as(f32, @floatFromInt(max_ampl)))*(window_h)
+        //    };
+        //    point.y += window_h/2;
+        //    c.DrawLineEx(old_point,point,2, c.GREEN);
+        //    old_point = point;
+        //}
+        //wave_start_pos += 1;
+
         start_pos += 1;
         c.EndDrawing();
     }
