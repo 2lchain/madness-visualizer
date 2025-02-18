@@ -1,0 +1,5 @@
+.zig-cache
+*.out
+*.mp3
+*wav
+*zon
