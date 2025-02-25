@@ -402,9 +402,9 @@ pub fn main() !void {
     //var prev_render = start_time;
     var fmt:[128]u8 = undefined;
     const total_time =  @as(f32, @floatFromInt(channel_time));
-    var cp = std.process.Child.init(&.{"audacious", file_name}, gpa.allocator());
-    try cp.spawn();
-    std.Thread.sleep(std.time.ns_per_s * 6);
+    //var cp = std.process.Child.init(&.{"audacious", file_name}, gpa.allocator());
+    //try cp.spawn();
+    //std.Thread.sleep(std.time.ns_per_s * 6);
     while (!c.WindowShouldClose()) {
         c.ClearBackground(c.BLACK);
         c.BeginDrawing();
@@ -421,7 +421,7 @@ pub fn main() !void {
             const time_fmt = try std.fmt.bufPrint(fmt[0..], "{} of {}", .{
                 @as(usize, @intFromFloat(music_time/100)), @as(usize, @intFromFloat(total_time/100))});
 
-            c.DrawText(time_fmt.ptr, 40, 80, 40, c.BLUE);
+            c.DrawText(time_fmt.ptr, 500, 200, 40, c.BLUE);
 
             var pos: usize = @intFromFloat(buf_pos);
             pos &= ~@as(usize, 0b11);
@@ -461,21 +461,40 @@ pub fn main() !void {
                 //mags[i] /= max_mag;
                 sum += mags[i];
             }
-            const mean = (sum / 1)/max_mag;
+            var mean = (sum / 1)/max_mag;
+            if(mean < std.math.floatMin(f64)) {
+                mean = 0;
+            }
             //const mean = (mags[0])/max_mag;
             for (0..16) |i| {
-                const height = @as(f32, @floatCast(mean * -(window_h / 10))) * (@as(f32, @floatFromInt(i + 16)) / @as(f32, @floatFromInt(32)));
-                const height2 = @as(f32, @floatCast(mean * -(window_h / 10))) * (@as(f32, @floatFromInt((32 - i) - 1)) / @as(f32, @floatFromInt(32)));
-                const thick1 = 16 * (@as(f32, @floatFromInt(i + 16)) / @as(f32, @floatFromInt(32)));
-                const thick2 = 16 * (@as(f32, @floatFromInt((32 - i) - 1)) / @as(f32, @floatFromInt(32)));
+                const height = @as(f32, @floatCast(mean * (window_h / 10))) * (@as(f32, @floatFromInt(i + 16)) / @as(f32, @floatFromInt(32)));
+                const height2 = @as(f32, @floatCast(mean * (window_h / 10))) * (@as(f32, @floatFromInt((32 - i) - 1)) / @as(f32, @floatFromInt(32)));
+                const thick1 = 18 * (@as(f32, @floatFromInt(i + 16)) / @as(f32, @floatFromInt(32)));
+                const thick2 = 18 * (@as(f32, @floatFromInt((32 - i) - 1)) / @as(f32, @floatFromInt(32)));
                 const gap1: f32 = (20 * (@as(f32, @floatFromInt(i + 16)) / @as(f32, @floatFromInt(32))));
                 const gap2: f32 = (20 * (@as(f32, @floatFromInt((32 - i) - 1)) / @as(f32, @floatFromInt(32)))) + 9;
                 //std.debug.print("gap1: {}, gap2: {}\n", .{ gap1, gap2 });
+
+                //if(height < 0)
+
+                
+                const bars:usize = @intFromFloat(height/5);
+                const bars2:usize = @intFromFloat(height2/5);
+
+
+                for(0..bars, 0..) |b, s| {
                 c.DrawRectangleV(.{
-                    .x = (@as(f32, @floatFromInt(i)) * gap1) + (60 + (320)),
-                    .y = @floatFromInt(window_h / 2),
-                }, .{ .x = -thick1, .y = height }, c.BLUE);
-                c.DrawRectangleV(.{ .x = (@as(f32, @floatFromInt(i)) * gap2) + 80, .y = @floatFromInt(window_h / 2) }, .{ .x = -thick2, .y = height2 }, c.BLUE);
+                    .x = (@as(f32, @floatFromInt(i)) * gap1) + (60 + (320))+@as(f32, @floatFromInt(s)),
+                    .y = @floatFromInt((window_h / 2)-(b*5)),
+                }, .{ .x = thick1, .y = 4 }, c.BLUE);
+                } 
+
+                for(0..bars2, 0..) |b, s| {
+                c.DrawRectangleV(.{ 
+                    .x = (@as(f32, @floatFromInt(i)) * gap2) + 80-@as(f32, @floatFromInt(s)),
+                    .y = @floatFromInt((window_h / 2)-(b*5)) },
+                     .{ .x = thick2, .y = 4 }, c.BLUE);
+                }
             }
 
             //std.debug.print("frame time: {}\n", .{pos});
